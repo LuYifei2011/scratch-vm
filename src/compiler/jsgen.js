@@ -117,6 +117,8 @@ class JSGenerator {
          */
         this.currentFrame = null;
 
+        this.deoptFrames = [];
+
         this.localVariables = new VariablePool('a');
         this._setupVariablesPool = new VariablePool('b');
         this._setupVariables = {};
@@ -610,6 +612,13 @@ class JSGenerator {
             break;
         case StackOpcode.CONTROL_REPEAT: {
             const i = this.localVariables.next();
+            this.deoptFrames.push({
+                blockId: block.sourceBlockId,
+                isLoop: true,
+                executionContext: {
+                    loopCounter: `${i} - 1`
+                }
+            });
             if (node.times.isAlwaysType(InputType.NUMBER_INT | InputType.NUMBER_INF)) {
                 this.source += `for (var ${i} = ${this.descendInput(node.times)}; ${i} > 0; ${i}--) {\n`;
             } else {
@@ -618,6 +627,7 @@ class JSGenerator {
             this.descendStack(node.do, new Frame(true));
             this.yieldLoop();
             this.source += `}\n`;
+            this.deoptFrames.pop();
             break;
         }
         case StackOpcode.CONTROL_STOP_ALL:
@@ -650,6 +660,7 @@ class JSGenerator {
             break;
         }
         case StackOpcode.CONTROL_WHILE:
+            this.deoptFrames.push({blockId: block.sourceBlockId, isLoop: true});
             this.source += `while (${this.descendInput(node.condition)}) {\n`;
             this.descendStack(node.do, new Frame(true));
             if (node.warpTimer) {
@@ -658,6 +669,7 @@ class JSGenerator {
                 this.yieldLoop();
             }
             this.source += `}\n`;
+            this.deoptFrames.pop();
             break;
         case StackOpcode.CONTROL_CLEAR_COUNTER:
             this.source += 'runtime.ext_scratch3_control._counter = 0;\n';
