@@ -1074,7 +1074,10 @@ class JSGenerator {
     }
 
     emitYield () {
-        if (false /* !this.target.runtime.compilerOptions.liveScriptEditing */){
+        // TODO: Add a compiler option for enabling live script editing.
+        const liveScriptEditing = true;
+
+        if (!liveScriptEditing) {
             this.source += 'yield;\n';
             return;
         }
