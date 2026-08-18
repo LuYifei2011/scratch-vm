@@ -1047,7 +1047,7 @@ class JSGenerator {
      */
     yieldNotWarp () {
         if (!this.isWarp) {
-            this.source += 'yield;\n';
+            this.emitYield();
             this.yielded();
         }
     }
@@ -1057,9 +1057,11 @@ class JSGenerator {
      */
     yieldStuckOrNotWarp () {
         if (this.isWarp) {
-            this.source += 'if (isStuck()) yield;\n';
+            this.source += 'if (isStuck()) {';
+            this.emitYield();
+            this.source += '}\n';
         } else {
-            this.source += 'yield;\n';
+            this.emitYield();
         }
         this.yielded();
     }
@@ -1071,11 +1073,45 @@ class JSGenerator {
         // Control may have been yielded to another script -- all bets are off.
     }
 
+    emitYield () {
+        if (false /* !this.target.runtime.compilerOptions.liveScriptEditing */){
+            this.source += 'yield;\n';
+            return;
+        }
+        this.source += 'yield (';
+        this.source += '  thread.compiledGeneration !== thread.blockContainer.compileGeneration';
+        this.source += `  ? ${this.generateDeoptSnapshot(this.deoptFrames)} : undefined`;
+        this.source += ');\n';
+    }
+
     /**
      * Write JS to request a redraw.
      */
     requestRedraw () {
         this.source += 'runtime.requestRedraw();\n';
+    }
+
+    generateDeoptSnapshot (deoptFrames) {
+        let result = '{frames: [\n';
+
+        for (const deoptFrame of deoptFrames) {
+            result += '{\n';
+            result += `  blockId: ${JSON.stringify(deoptFrame.blockId)},\n`;
+            result += `  isLoop: ${deoptFrame.isLoop},\n`;
+            result += `  warpMode: ${this.isWarp},\n`;
+            if (deoptFrame.executionContext) {
+                result += '  executionContext: {\n';
+                for (const [key, value] of Object.entries(deoptFrame.executionContext)) {
+                    result += `    ${key}: ${value},\n`;
+                }
+                result += '  }\n';
+            }
+            // todo: params
+            result += '}\n';
+        }
+
+        result += ']}';
+        return result;
     }
 
     /**
