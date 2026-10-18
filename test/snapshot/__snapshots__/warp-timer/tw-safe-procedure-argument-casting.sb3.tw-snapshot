@@ -3,7 +3,7 @@
 
 // Sprite1 script
 (function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
-return function* genXYZ () {
+return function funXYZ () {
 runtime.ext_scratch3_looks._say("plan 2", target);
 thread.procedures["Zswitch %s"]("1");
 if ((((target.currentCostume + 1) === 2) && (toNotNaN(+target.getCostumes()[target.currentCostume].name) === 1))) {
